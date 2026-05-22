@@ -261,7 +261,6 @@ void MedicineReminder_Task(void *pvParameters)
         {18, 0}   
     };
     const int num_times = sizeof(med_times) / sizeof(med_times[0]);
-
   
     int last_alert[num_times];
     for (int i = 0; i < num_times; i++) {
@@ -274,7 +273,10 @@ void MedicineReminder_Task(void *pvParameters)
     {
         uint8_t hour, minute, second;
        
-        RTC_TimeTypeDef sTime;
+         RTC_TimeTypeDef sTime;
+    RTC_DateTypeDef sDate;
+
+    HAL_RTC_GetDate(&hrtc, &sDate, RTC_FORMAT_BIN);
         if (HAL_RTC_GetTime(&hrtc, &sTime, RTC_FORMAT_BIN) != HAL_OK) {
 					 printf("Time: %02d:%02d:%02d\r\n", sTime.Hours, sTime.Minutes, sTime.Seconds);
             vTaskDelay(pdMS_TO_TICKS(1000));
@@ -312,7 +314,7 @@ void MedicineReminder_Task(void *pvParameters)
         }
 
        
-        vTaskDelay(pdMS_TO_TICKS(500));
+        vTaskDelay(pdMS_TO_TICKS(100));
     }
 }
 
