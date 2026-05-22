@@ -1,0 +1,160 @@
+#include "esp8266.h"
+#include "usart.h"      // ?? huart1, huart2 ???
+#include <string.h>
+#include <stdio.h>
+
+extern UART_HandleTypeDef huart1;  // ????
+extern UART_HandleTypeDef huart2;  // ESP8266 ????
+
+/* ?????(?? ESP8266 ??) */
+#define RX_BUF_SIZE    512
+static uint8_t rx_buf[RX_BUF_SIZE];
+static volatile uint16_t rx_head = 0;
+static volatile uint16_t rx_tail = 0;
+
+/* ?????(??? SendCmd ?????) */
+static uint8_t temp_buf[RX_BUF_SIZE];
+
+/* ?? AT ?????????(???? ms) */
+bool ESP8266_SendCmd(const char *cmd, const char *ack, uint32_t timeout_ms)
+{
+    char tx_buf[128];
+    snprintf(tx_buf, sizeof(tx_buf), "%s\r\n", cmd);
+    HAL_UART_Transmit(&huart2, (uint8_t*)tx_buf, strlen(tx_buf), 100);
+    printf("[Send] %s", tx_buf);
+
+    uint32_t start = HAL_GetTick();
+    while ((HAL_GetTick() - start) < timeout_ms)
+    {
+        /* ??????????????? */
+        uint16_t len = 0;
+        while (rx_head != rx_tail && len < RX_BUF_SIZE - 1)
+        {
+            temp_buf[len++] = rx_buf[rx_tail];
+            rx_tail = (rx_tail + 1) % RX_BUF_SIZE;
+        }
+        if (len > 0)
+        {
+            temp_buf[len] = '\0';
+            printf("[Recv] %s", temp_buf);
+            if (strstr((char*)temp_buf, ack) != NULL)
+                return true;
+        }
+        HAL_Delay(10);
+    }
+    return false;
+}
+
+/* ???? ESP8266 */
+void ESP8266_Rst(void)
+{
+    HAL_GPIO_WritePin(ESP_RST_PORT, ESP_RST_PIN, GPIO_PIN_RESET);
+    HAL_Delay(200);
+    HAL_GPIO_WritePin(ESP_RST_PORT, ESP_RST_PIN, GPIO_PIN_SET);
+    HAL_Delay(1000);   // ????????
+}
+
+/* ???:?? RST ??????? */
+void ESP8266_Init(uint32_t baudrate)
+{
+    /* ?? RST ???? GPIO ?? */
+    __HAL_RCC_GPIOB_CLK_ENABLE();
+
+    GPIO_InitTypeDef gpio_init = {0};
+    gpio_init.Pin = ESP_RST_PIN;
+    gpio_init.Mode = GPIO_MODE_OUTPUT_PP;
+    gpio_init.Pull = GPIO_NOPULL;
+    gpio_init.Speed = GPIO_SPEED_FREQ_HIGH;
+    HAL_GPIO_Init(ESP_RST_PORT, &gpio_init);
+
+    /* ?? CH_PD ?????(????),????? CH_PD */
+    /* ??????? GPIO ?? CH_PD,??????? */
+
+    /* ?? ESP8266 */
+    ESP8266_Rst();
+
+    /* ??:USART2 ??????? CubeMX ???(MX_USART2_UART_Init) */
+    /* ?????? USART2 ???????(? main ???) */
+}
+
+/* ?? WiFi AP */
+bool ESP8266_JoinAP(const char *ssid, const char *pwd)
+{
+    char cmd[128];
+    snprintf(cmd, sizeof(cmd), "AT+CWJAP=\"%s\",\"%s\"", ssid, pwd);
+    return ESP8266_SendCmd(cmd, "OK", 10000);
+}
+
+/* ???? IP ?????(?? USART1) */
+void ESP8266_GetIP(void)
+{
+    ESP8266_SendCmd("AT+CIFSR", "OK", 2000);
+}
+
+/* ?? TCP ???(?????,????) */
+bool ESP8266_StartTCPServer(uint16_t port)
+{
+    /* ?????????? */
+    if (!ESP8266_SendCmd("AT+CIPMUX=1", "OK", 2000))
+        return false;
+    /* ????? */
+    char cmd[32];
+    snprintf(cmd, sizeof(cmd), "AT+CIPSERVER=1,%d", port);
+    return ESP8266_SendCmd(cmd, "OK", 2000);
+}
+
+/* ??????????(???????) */
+void ESP8266_Process(void)
+{
+    /* ??????????????? temp_buf */
+    uint16_t len = 0;
+    while (rx_head != rx_tail && len < RX_BUF_SIZE - 1)
+    {
+        temp_buf[len++] = rx_buf[rx_tail];
+        rx_tail = (rx_tail + 1) % RX_BUF_SIZE;
+    }
+    if (len == 0)
+        return;
+
+    temp_buf[len] = '\0';
+    /* ?????? TCP ????????,??? "+IPD,<id>,<len>:<data>" */
+    /* ??:???? "LEDON",??? LED;?? "LEDOFF" ??????????? */
+    char *p = strstr((char*)temp_buf, "LEDON");
+    if (p)
+    {
+        /* ????? LED ?? PE6,????? */
+        // HAL_GPIO_WritePin(GPIOE, GPIO_PIN_6, GPIO_PIN_RESET);
+        printf("Received LEDON command\n");
+    }
+    p = strstr((char*)temp_buf, "LEDOFF");
+    if (p)
+    {
+        // HAL_GPIO_WritePin(GPIOE, GPIO_PIN_6, GPIO_PIN_SET);
+        printf("Received LEDOFF command\n");
+    }
+
+    /* ??????????????? */
+}
+
+/* USART2 ??????(???? stm32f4xx_it.c ?,?????????????????) */
+/* ???? stm32f4xx_it.c ?,????????,?????? rx_buf ??? */
+/* ????,?????????????,???? it.c ?????????????? */
+
+/* ??:??????? stm32f4xx_it.c ???? USART2_IRQHandler,???????! */
+#if 0   // ?? it.c ???,???????? esp8266.c
+void USART2_IRQHandler(void)
+{
+    if (USART2->SR & USART_SR_RXNE)
+    {
+        uint8_t data = USART2->DR;
+        uint16_t next = (rx_head + 1) % RX_BUF_SIZE;
+        if (next != rx_tail)
+        {
+            rx_buf[rx_head] = data;
+            rx_head = next;
+        }
+        /* ??????,???(????) */
+    }
+    /* ??????(?? DR ???? RXNE) */
+}
+#endif

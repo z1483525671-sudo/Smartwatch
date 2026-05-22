@@ -39,6 +39,8 @@ project\freertos.o: ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_i2c.h
 project\freertos.o: ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_i2c_ex.h
 project\freertos.o: ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_pwr.h
 project\freertos.o: ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_pwr_ex.h
+project\freertos.o: ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_rtc.h
+project\freertos.o: ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_rtc_ex.h
 project\freertos.o: ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_tim.h
 project\freertos.o: ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_tim_ex.h
 project\freertos.o: ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_uart.h
@@ -50,3 +52,4 @@ project\freertos.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/event_gro
 project\freertos.o: H:\Keil_v5\ARM\ARM_Compiler_5.06u7\Bin\..\include\stdio.h
 project\freertos.o: H:\Keil_v5\ARM\ARM_Compiler_5.06u7\Bin\..\include\string.h
 project\freertos.o: H:\Keil_v5\ARM\ARM_Compiler_5.06u7\Bin\..\include\stdlib.h
+project\freertos.o: ../Core/Inc/rtc.h

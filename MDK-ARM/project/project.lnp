@@ -4,6 +4,7 @@
 "project\gpio.o"
 "project\freertos.o"
 "project\i2c.o"
+"project\rtc.o"
 "project\usart.o"
 "project\stm32f4xx_it.o"
 "project\stm32f4xx_hal_msp.o"
@@ -23,6 +24,8 @@
 "project\stm32f4xx_hal_exti.o"
 "project\stm32f4xx_hal_i2c.o"
 "project\stm32f4xx_hal_i2c_ex.o"
+"project\stm32f4xx_hal_rtc.o"
+"project\stm32f4xx_hal_rtc_ex.o"
 "project\stm32f4xx_hal_tim.o"
 "project\stm32f4xx_hal_tim_ex.o"
 "project\stm32f4xx_hal_uart.o"
@@ -37,6 +40,7 @@
 "project\cmsis_os.o"
 "project\heap_4.o"
 "project\port.o"
+"project\esp8266.o"
 --library_type=microlib --strict --scatter "project\project.sct"
 --summary_stderr --info summarysizes --map --load_addr_map_info --xref --callgraph --symbols
 --info sizes --info totals --info unused --info veneers

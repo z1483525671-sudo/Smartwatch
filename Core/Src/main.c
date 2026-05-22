@@ -20,12 +20,15 @@
 #include "main.h"
 #include "cmsis_os.h"
 #include "i2c.h"
+#include "rtc.h"
 #include "usart.h"
 #include "gpio.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "stdio.h"
+#include "esp8266.h"
+
 
 void MPU6050_Init(void)
 {
@@ -114,25 +117,42 @@ int main(void)
   MX_GPIO_Init();
   MX_USART1_UART_Init();
   MX_I2C1_Init();
+	MX_RTC_Init();
   MX_USART2_UART_Init();
+  MX_RTC_Init();
+	MPU6050_Init();
   /* USER CODE BEGIN 2 */
-MPU6050_Init();
-// ?????
-// ?????:?????,????????(???? RXNE ??)
 
 
-// ????????? "AT\r\n"
+
+// ??????? 11:59:50,????
+RTC_TimeTypeDef sTime = {0};
+sTime.Hours = 11;
+sTime.Minutes = 59;
+sTime.Seconds = 50;
+sTime.DayLightSaving = RTC_DAYLIGHTSAVING_NONE;
+sTime.StoreOperation = RTC_STOREOPERATION_RESET;
+HAL_RTC_SetTime(&hrtc, &sTime, RTC_FORMAT_BIN);
+
+// ????????(?????)
+RTC_DateTypeDef sDate = {0};
+sDate.Year = 25;
+sDate.Month = 5;
+sDate.Date = 22;
+sDate.WeekDay = 4;
+HAL_RTC_SetDate(&hrtc, &sDate, RTC_FORMAT_BIN);
+
+
+
 
    
   /* USER CODE END 2 */
 
   /* Call init function for freertos objects (in freertos.c) */
-  MX_FREERTOS_Init();
+ // MX_FREERTOS_Init();
 
   /* Start scheduler */
-  osKernelStart();
-	
-
+//  osKernelStart();
   /* We should never get here as control is now taken by the scheduler */
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
@@ -140,7 +160,12 @@ MPU6050_Init();
   while (1)
   {
     /* USER CODE END WHILE */
-
+RTC_DateTypeDef sDate;
+        RTC_TimeTypeDef sTimeRead;
+        HAL_RTC_GetDate(&hrtc, &sDate, RTC_FORMAT_BIN);
+        HAL_RTC_GetTime(&hrtc, &sTimeRead, RTC_FORMAT_BIN);
+        printf("%02d:%02d:%02d\r\n", sTimeRead.Hours, sTimeRead.Minutes, sTimeRead.Seconds);
+        HAL_Delay(1000);
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
@@ -163,8 +188,9 @@ void SystemClock_Config(void)
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
   */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_LSI|RCC_OSCILLATORTYPE_HSE;
   RCC_OscInitStruct.HSEState = RCC_HSE_ON;
+  RCC_OscInitStruct.LSIState = RCC_LSI_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
   RCC_OscInitStruct.PLL.PLLM = 8;

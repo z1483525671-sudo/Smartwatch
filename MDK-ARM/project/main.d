@@ -30,6 +30,8 @@ project\main.o: ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_i2c.h
 project\main.o: ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_i2c_ex.h
 project\main.o: ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_pwr.h
 project\main.o: ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_pwr_ex.h
+project\main.o: ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_rtc.h
+project\main.o: ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_rtc_ex.h
 project\main.o: ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_tim.h
 project\main.o: ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_tim_ex.h
 project\main.o: ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_uart.h
@@ -48,6 +50,9 @@ project\main.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/queue.h
 project\main.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/semphr.h
 project\main.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/event_groups.h
 project\main.o: ../Core/Inc/i2c.h
+project\main.o: ../Core/Inc/rtc.h
 project\main.o: ../Core/Inc/usart.h
 project\main.o: ../Core/Inc/gpio.h
 project\main.o: H:\Keil_v5\ARM\ARM_Compiler_5.06u7\Bin\..\include\stdio.h
+project\main.o: ../MDK-ARM/esp8266.h
+project\main.o: H:\Keil_v5\ARM\ARM_Compiler_5.06u7\Bin\..\include\stdbool.h

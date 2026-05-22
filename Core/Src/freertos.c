@@ -29,13 +29,14 @@
 #include "stdio.h"
 #include <string.h>
 #include <stdlib.h> 
-
+#include "rtc.h"
 
 extern UART_HandleTypeDef huart2;
 extern void MPU6050_Read_Accel(int16_t *ax, int16_t *ay, int16_t *az);
 void Sensor_Task(void *pvParameters);
 void Process_Task(void *pvParameters);
 void Receive_Task(void *pvParameters);
+void MedicineReminder_Task(void *pvParameters);
 
 void WIFI_Task(void *pvParameters);
 QueueHandle_t xAccelQueue;
@@ -134,7 +135,8 @@ osThreadCreate(osThread(WiFiTask), NULL);
   osThreadDef(ReceiveTask, Receive_Task, osPriorityNormal, 0, 1024);
     osThreadCreate(osThread(ReceiveTask), NULL);
 */
-
+osThreadDef(MedicineReminder, MedicineReminder_Task, osPriorityNormal, 0, 256);
+osThreadCreate(osThread(MedicineReminder), NULL);
 
   /* USER CODE END RTOS_TIMERS */
 
@@ -229,7 +231,7 @@ static int ESP8266_RecvFrame(char *buf, int maxlen, uint32_t timeout_ms) {
     return len;
 }
 
-// ?????????,?? 1 ????
+
 static int WiFi_WaitFor(const char *keyword, uint32_t total_timeout_ms) {
     char frame[256];
     TickType_t end = xTaskGetTickCount() + pdMS_TO_TICKS(total_timeout_ms);
@@ -242,6 +244,80 @@ static int WiFi_WaitFor(const char *keyword, uint32_t total_timeout_ms) {
     }
     return 0;
 }
+
+
+
+void MedicineReminder_Task(void *pvParameters)
+{
+    
+    typedef struct {
+        uint8_t hour;
+        uint8_t minute;
+    } MedTime_t;
+
+    const MedTime_t med_times[] = {
+        {8, 0},   
+        {12, 0}, 
+        {18, 0}   
+    };
+    const int num_times = sizeof(med_times) / sizeof(med_times[0]);
+
+  
+    int last_alert[num_times];
+    for (int i = 0; i < num_times; i++) {
+        last_alert[i] = 0;
+    }
+
+    uint8_t last_minute = 0xFF;  
+
+    for (;;)
+    {
+        uint8_t hour, minute, second;
+       
+        RTC_TimeTypeDef sTime;
+        if (HAL_RTC_GetTime(&hrtc, &sTime, RTC_FORMAT_BIN) != HAL_OK) {
+					 printf("Time: %02d:%02d:%02d\r\n", sTime.Hours, sTime.Minutes, sTime.Seconds);
+            vTaskDelay(pdMS_TO_TICKS(1000));
+            continue;
+        }
+        hour = sTime.Hours;
+        minute = sTime.Minutes;
+        second = sTime.Seconds;
+
+        if (minute != last_minute)
+        {
+            last_minute = minute;
+   
+            for (int i = 0; i < num_times; i++)
+            {
+                if (hour == med_times[i].hour && minute == med_times[i].minute)
+                {
+                    if (!last_alert[i])
+                    {
+                      
+                        printf("[REMINDER] Take medicine now! Time: %02d:%02d\r\n", hour, minute);
+                     
+                        last_alert[i] = 1; 
+                    }
+                }
+                else
+                {
+                
+                    if (last_alert[i] == 1 && (hour != med_times[i].hour || minute != med_times[i].minute))
+                    {
+                        last_alert[i] = 0;
+                    }
+                }
+            }
+        }
+
+       
+        vTaskDelay(pdMS_TO_TICKS(500));
+    }
+}
+
+
+
 
 void WIFI_Task(void *pvParameters) {
     // ---- WiFi ?? ----
