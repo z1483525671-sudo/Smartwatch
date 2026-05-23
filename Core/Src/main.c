@@ -64,7 +64,8 @@ QueueHandle_t uart2_rx_queue;
 
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
-
+uint8_t rx_data;
+uint8_t ble_rx_buffer[1];  
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
@@ -118,8 +119,7 @@ int main(void)
   MX_USART2_UART_Init();
   MX_RTC_Init();
   /* USER CODE BEGIN 2 */
-
-   
+MPU6050_Init();
   /* USER CODE END 2 */
 
   /* Call init function for freertos objects (in freertos.c) */
@@ -134,12 +134,13 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
-
 		
+		 
+  
 		
     /* USER CODE BEGIN 3 */
 		 
-   HAL_Delay(500);
+ 
  
   }
   /* USER CODE END 3 */

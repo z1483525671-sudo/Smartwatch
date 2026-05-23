@@ -37,8 +37,8 @@ void Sensor_Task(void *pvParameters);
 void Process_Task(void *pvParameters);
 void Receive_Task(void *pvParameters);
 void MedicineReminder_Task(void *pvParameters);
+void BL_Task(void *pvParaneters);
 
-void WIFI_Task(void *pvParameters);
 QueueHandle_t xAccelQueue;
 QueueHandle_t xUartRxQueue;  
 
@@ -62,7 +62,7 @@ uint8_t rx_byte;
 
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN Variables */
- uint8_t rx_byte;
+
 
 /* USER CODE END Variables */
 osThreadId UIHandle;
@@ -116,27 +116,27 @@ if (xUartRxQueue == NULL) {
 HAL_UART_Receive_IT(&huart2, (uint8_t*)&rx_byte, 1);
   /* USER CODE END Init */
 
+
+
   /* USER CODE BEGIN RTOS_MUTEX */
   osThreadDef(SensorTask, Sensor_Task, osPriorityHigh, 0, 512);
     osThreadCreate(osThread(SensorTask), NULL);
   /* USER CODE END RTOS_MUTEX */
 
   /* USER CODE BEGIN RTOS_SEMAPHORES */
-  osThreadDef(ProcessTask, Process_Task, osPriorityNormal, 0, 1024);
+  osThreadDef(ProcessTask, Process_Task, osPriorityHigh, 0, 1024);
     osThreadCreate(osThread(ProcessTask), NULL);
   /* USER CODE END RTOS_SEMAPHORES */
 
   /* USER CODE BEGIN RTOS_TIMERS */
 
-
-osThreadDef(WiFiTask, WIFI_Task, osPriorityNormal, 0, 1024);
-osThreadCreate(osThread(WiFiTask), NULL);
 /*
   osThreadDef(ReceiveTask, Receive_Task, osPriorityNormal, 0, 1024);
     osThreadCreate(osThread(ReceiveTask), NULL);
 */
 osThreadDef(MedicineReminder, MedicineReminder_Task, osPriorityNormal, 0, 256);
 osThreadCreate(osThread(MedicineReminder), NULL);
+
 
   /* USER CODE END RTOS_TIMERS */
 
@@ -207,43 +207,9 @@ void StartTask02(void const * argument)
 
 
 // ?? AT ??
-static void ESP8266_Send(const char *cmd) {
-    HAL_UART_Transmit(&huart2, (uint8_t *)cmd, strlen(cmd), 1000);
-}
-
-// ?????????(????)
-// ????????,???? 0
-static int ESP8266_RecvFrame(char *buf, int maxlen, uint32_t timeout_ms) {
-    int len = 0;
-    uint8_t ch;
-    TickType_t end = xTaskGetTickCount() + pdMS_TO_TICKS(timeout_ms);
-
-    while (xTaskGetTickCount() < end) {
-        if (xQueueReceive(xUartRxQueue, &ch, pdMS_TO_TICKS(20)) == pdPASS) {
-            if (len < maxlen - 1) {
-                buf[len++] = ch;
-            }
-            // ??????:????????,????
-            end = xTaskGetTickCount() + pdMS_TO_TICKS(timeout_ms);
-        }
-    }
-    if (len > 0) buf[len] = '\0';
-    return len;
-}
 
 
-static int WiFi_WaitFor(const char *keyword, uint32_t total_timeout_ms) {
-    char frame[256];
-    TickType_t end = xTaskGetTickCount() + pdMS_TO_TICKS(total_timeout_ms);
-    while (xTaskGetTickCount() < end) {
-        if (ESP8266_RecvFrame(frame, sizeof(frame), 200) > 0) {
-            if (strstr(frame, keyword) != NULL) {
-                return 1;
-            }
-        }
-    }
-    return 0;
-}
+
 
 
 
@@ -321,95 +287,6 @@ void MedicineReminder_Task(void *pvParameters)
 
 
 
-void WIFI_Task(void *pvParameters) {
-    // ---- WiFi ?? ----
-    const char *ssid = "??WiFi?";
-    const char *pwd  = "??WiFi??";
-    char cmd[128];
-
-    // ? ESP8266 ??
-    vTaskDelay(pdMS_TO_TICKS(3000));
-
-    // ?? AT
-    ESP8266_Send("AT\r\n");
-    if (!WiFi_WaitFor("OK", 2000)) goto error;
-
-    // ?? Station ??
-    ESP8266_Send("AT+CWMODE=1\r\n");
-    if (!WiFi_WaitFor("OK", 2000)) goto error;
-
-    // ?? WiFi
-    snprintf(cmd, sizeof(cmd), "AT+CWJAP=\"%s\",\"%s\"\r\n", ssid, pwd);
-    ESP8266_Send(cmd);
-    if (!WiFi_WaitFor("OK", 15000)) goto error;
-
-    // ?? IP
-    ESP8266_Send("AT+CIFSR\r\n");
-    if (WiFi_WaitFor("STAIP", 3000)) {
-        // ????:PC13 LED ??
-        HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET);
-        while (1) { vTaskDelay(1000); }   // ????
-    }
-
-error:
-    // ??:PC13 LED ??
-    while (1) {
-        HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
-        vTaskDelay(pdMS_TO_TICKS(200));
-    }
-}
-
-
-
-
-
-/*
-void Receive_Task(void *pvParameters)
-{
-    printf("start\r\n");
-
-    char *test_msg = "Hello UART!\r\n";
-    HAL_UART_Transmit(&huart2, (uint8_t*)test_msg, strlen(test_msg), 100);
-
-    uint8_t rx_buf[128];
-    uint16_t rx_len = 0;
-    uint8_t ch;
-    const TickType_t xByteTimeout = pdMS_TO_TICKS(20);   // ?????,???
-
-    for (;;)
-    {
-        // ????????(???????)
-        if (xQueueReceive(xUartRxQueue, &ch, portMAX_DELAY) == pdPASS)
-        {
-            rx_buf[rx_len++] = ch;
-            TickType_t xLastByteTime = xTaskGetTickCount();
-
-            // ????,???? 20ms ?????
-            while ((xTaskGetTickCount() - xLastByteTime) < xByteTimeout)
-            {
-                if (xQueueReceive(xUartRxQueue, &ch, 0) == pdPASS)
-                {
-                    if (rx_len < sizeof(rx_buf) - 1)
-                        rx_buf[rx_len++] = ch;
-                    xLastByteTime = xTaskGetTickCount();  // ????
-                }
-                else
-                {
-                    vTaskDelay(1);   // ?? CPU,????
-                }
-            }
-
-            // ????,????
-            rx_buf[rx_len] = '\0';
-            printf("Received %d bytes: %s\r\n", rx_len, rx_buf);
-            rx_len = 0;
-        }
-    }
-}
-
-*/
-
-
 
 
 
@@ -418,6 +295,7 @@ void Receive_Task(void *pvParameters)
 void Process_Task(void *pvParameters)
 {
     int16_t data[3];
+	
     // ?????????(??,????)
     static enum {
         STATE_NORMAL,
@@ -437,7 +315,7 @@ void Process_Task(void *pvParameters)
             // ??? g(?? ?8g,LSB = 4096)
          
             int32_t sum_sq =(int32_t)ax*ax + (int32_t)ay*ay + (int32_t)az*az;
-
+            printf("sum_sq = %d\n", sum_sq);
             uint32_t now = xTaskGetTickCount() * portTICK_PERIOD_MS;  // ????
 					
             // ? switch ???????(??????????)
@@ -495,29 +373,31 @@ switch (fall_state)
         break;
 }
 
-						
-						
-          
+
         }
     }
 }
+
+
+
 
 void Sensor_Task(void *pvParameters)
 {
     int16_t ax, ay, az;
     TickType_t xLastWakeTime = xTaskGetTickCount();
     int16_t data[3];
-
     for (;;)
     {
         MPU6050_Read_Accel(&ax, &ay, &az);
         data[0] = ax; data[1] = ay; data[2] = az;
-        // ?????,??????? 0 ??(???,??)
+       
         xQueueSend(xAccelQueue, data, 0);
         vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(50));
     }
 }
 /* USER CODE END 4 */
+
+
 
 
 
@@ -530,4 +410,8 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
         portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
     }
 }
+
+
+
+
 /* USER CODE END Application */
